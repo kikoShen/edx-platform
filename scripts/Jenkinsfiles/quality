@@ -45,7 +45,7 @@ pipeline {
                  expression { env.ghprbActualCommit == null }
             }
             steps {
-                build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: '${GIT_COMMIT}'),
+                build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: GIT_COMMIT),
                     string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
                     string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'),
                     string(name: 'DESCRIPTION', value: 'Pending'), string(name: 'CONTEXT', value: 'jenkins/quality-master-pipe'),
@@ -203,7 +203,7 @@ pipeline {
                         build_status = "success"
                         build_description = "failure"
                     }
-                    build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: '${GIT_COMMIT}'),
+                    build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: GIT_COMMIT),
                         string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
                         string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'),
                         string(name: 'DESCRIPTION', value: build_description), string(name: 'CONTEXT', value: 'jenkins/quality-master-pipe'),
