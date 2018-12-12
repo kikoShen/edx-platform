@@ -49,7 +49,7 @@ pipeline {
                     string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
                     string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'),
                     string(name: 'DESCRIPTION', value: 'Pending'), string(name: 'CONTEXT', value: 'jenkins/quality-master-pipe'),
-                    string(name: 'CREATE_DEPLOYMENT', value: false), string(name: 'BUILD_STATUS', value: 'pending')],
+                    string(name: 'CREATE_DEPLOYMENT', value: 'false'), string(name: 'BUILD_STATUS', value: 'pending')],
                     propagate: false, wait: false
             }
         }
@@ -194,12 +194,12 @@ pipeline {
                     build job: 'edx-platform-test-notifier', parameters: [string(name: 'PR_NUMBER', value: '${ghprbPullId}')], wait: false
                 } else {
                     if (currentBuild.currentResult == "SUCCESS") {
-                        create_deployment = true
+                        create_deployment = "true"
                         build_status = "success"
                         build_description = "Build Passed"
                     }
                     else {
-                        create_deployment = false
+                        create_deployment = "false"
                         build_status = "success"
                         build_description = "failure"
                     }
