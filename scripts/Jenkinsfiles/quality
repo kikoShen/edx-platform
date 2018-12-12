@@ -45,6 +45,7 @@ pipeline {
                  expression { env.ghprbActualCommit == null }
             }
             steps {
+                sh "env"
                 build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: GIT_COMMIT),
                     string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
                     string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'),
