@@ -47,7 +47,7 @@ pipeline {
             steps {
                 script {
                     commit_sha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                    target_url = 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'
+                    target_url = 'https://build.testeng.edx.org/job/${env.JOB_NAME}/${env.BUILD_NUMBER}/'
                     build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: commit_sha),
                         string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
                         string(name: 'TARGET_URL', value: target_url),
