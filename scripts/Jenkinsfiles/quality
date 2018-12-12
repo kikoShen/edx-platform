@@ -49,7 +49,7 @@ pipeline {
                     commit_sha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: commit_sha),
                         string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
-                        string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'),
+                        string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${env.JOB_NAME}/${env.BUILD_NUMBER}/'),
                         string(name: 'DESCRIPTION', value: 'Pending'), string(name: 'CONTEXT', value: 'jenkins/quality-master-pipe'),
                         string(name: 'CREATE_DEPLOYMENT', value: 'false'), string(name: 'BUILD_STATUS', value: 'pending')],
                         propagate: false, wait: false
