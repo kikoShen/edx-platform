@@ -40,19 +40,17 @@ pipeline {
         timeout(60)
     }
     stages {
-        steps {
+        stage('Mark build as pending on Github') {
             when {
                  expression { env.ghprbActualCommit != null }
             }
-            stage('Mark build as pending on Github') {
-                steps {
-                    build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: '${GIT_COMMIT}'),
-                        string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
-                        string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'),
-                        string(name: 'DESCRIPTION', value: 'Pending'), string(name: 'CONTEXT', value: 'jenkins/quality-master-pipe'),
-                        string(name: 'CREATE_DEPLOYMENT', value: false), string(name: 'BUILD_STATUS', value: 'pending')],
-                        propagate: false, wait: false
-                }
+            steps {
+                build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: '${GIT_COMMIT}'),
+                    string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
+                    string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'),
+                    string(name: 'DESCRIPTION', value: 'Pending'), string(name: 'CONTEXT', value: 'jenkins/quality-master-pipe'),
+                    string(name: 'CREATE_DEPLOYMENT', value: false), string(name: 'BUILD_STATUS', value: 'pending')],
+                    propagate: false, wait: false
             }
         }
         stage('Run Tests') {
