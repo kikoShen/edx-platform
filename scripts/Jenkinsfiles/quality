@@ -45,7 +45,7 @@ pipeline {
                  expression { env.ghprbActualCommit == null }
             }
             steps {
-                commit_sha = sh(returnStdout: true, script: 'git rev-parse HEAD')
+                sh "git rev-parse HEAD"
                 build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: commit_sha),
                     string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
                     string(name: 'TARGET_URL', value: 'https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/'),
