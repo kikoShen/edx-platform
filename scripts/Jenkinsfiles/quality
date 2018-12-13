@@ -150,7 +150,7 @@ pipeline {
                         doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'CloneOption',
                         honorRefspec: true, noTags: true, shallow: false]], submoduleCfg: [],
                         userRemoteConfigs: [[credentialsId: 'jenkins-worker',
-                        refspec: "+refs/heads/${ghprbTargetBranch}:refs/remotes/origin/${ghprbTargetBranch} +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*",
+                        refspec: "+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*",
                         url: 'git@github.com:edx/edx-platform.git']]]
                     unstash 'quality-1-reports'
                     unstash 'quality-2-reports'
