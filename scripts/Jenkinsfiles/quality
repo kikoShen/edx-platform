@@ -8,7 +8,7 @@ def runQualityTests() {
                 git_branch_maps = [[name: "${ghprbActualCommit}"], [name: 'master']]
                 refspec = "+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
             } else {
-                git_branch_maps = [[name: "${ghprbActualCommit}"]
+                git_branch_maps = [[name: "${ghprbActualCommit}"]]
                 refspec = "+refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
             }
         } else {
