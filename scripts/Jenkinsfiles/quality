@@ -146,7 +146,7 @@ pipeline {
             }
             steps {
                 sshagent(credentials: ['jenkins-worker'], ignoreMissing: true) {
-                    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: "${ghprbActualCommit}"], [name: "{$ghprbTargetBranch}"]],
+                    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: "${ghprbActualCommit}"], [name: "${ghprbTargetBranch}"]],
                         doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'CloneOption',
                         honorRefspec: true, noTags: true, shallow: false]], submoduleCfg: [],
                         userRemoteConfigs: [[credentialsId: 'jenkins-worker',
