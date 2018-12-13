@@ -1,6 +1,5 @@
 def runQualityTests() {
     sshagent(credentials: ['jenkins-worker'], ignoreMissing: true) {
-
         // Determine git refspec, branch(es), and clone type
         git_shallow_clone = true
         if (env.ghprbActualCommit) {
@@ -203,8 +202,8 @@ pipeline {
                     }
                     else {
                         create_deployment = "false"
-                        build_status = "success"
-                        build_description = "failure"
+                        build_status = "failure"
+                        build_description = "Build Failes"
                     }
                     commit_sha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: commit_sha),
@@ -215,6 +214,7 @@ pipeline {
                         propagate: false, wait: false
                     if (["aborted", "failure", "unstable", "fixed"].contains(currentBuild.currentResult)){
                         def msg = "${currentBuild.currentResult}: `${JOB_NAME}` #${BUILD_NUMBER}:\n${BUILD_URL}"
+                        slackSend msg
                     }
                 }
             }
