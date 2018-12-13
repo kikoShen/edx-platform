@@ -214,8 +214,7 @@ pipeline {
                         string(name: 'CREATE_DEPLOYMENT', value: create_deployment), string(name: 'BUILD_STATUS', value: build_status)],
                         propagate: false, wait: false
                     if (["aborted", "failure", "unstable", "fixed"].contains(currentBuild.currentResult)){
-                        def msg = "${currentBuild.currentResult}: `${JOB_NAME}` #${BUILD_NUMBER}:\n${BUILD_URL}"
-                        slackSend msg
+                        slackSend "${currentBuild.currentResult}: `${JOB_NAME}` #${BUILD_NUMBER}:\n${BUILD_URL}"
                     }
                 }
             }
