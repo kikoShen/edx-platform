@@ -4,16 +4,16 @@ def runQualityTests() {
         git_shallow_clone = true
         if (env.ghprbActualCommit) {
             if (SHARD == "4") {
-                git_branch_maps = [[name: '${ghprbActualCommit}'], [name: 'master']]
+                git_branch_maps = [[name: "${ghprbActualCommit}"], [name: 'master']]
                 git_shallow_clone = false
             } else {
                 // shard 4 needs master and history of branches for xsslint
-                git_branch_maps = [[name: '${ghprbActualCommit}']]
+                git_branch_maps = [[name: "${ghprbActualCommit}"]]
             }
-            refspec = '+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*'
+            refspec = "+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
         } else {
             git_branch_maps = [[name: 'master']]
-            refspec = '+refs/heads/master:refs/remotes/origin/master'
+            refspec = "+refs/heads/master:refs/remotes/origin/master"
         }
 
         checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: git_branch_maps,
@@ -193,7 +193,7 @@ pipeline {
         always {
             script{
                 if (env.ghprbPullId != null) {
-                    build job: 'edx-platform-test-notifier', parameters: [string(name: 'PR_NUMBER', value: '${ghprbPullId}')], wait: false
+                    build job: 'edx-platform-test-notifier', parameters: [string(name: 'PR_NUMBER', value: "${ghprbPullId}")], wait: false
                 } else {
                     if (currentBuild.currentResult == "SUCCESS") {
                         create_deployment = "true"
@@ -205,6 +205,7 @@ pipeline {
                         build_status = "failure"
                         build_description = "Build Failes"
                     }
+
                     commit_sha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: commit_sha),
                         string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
