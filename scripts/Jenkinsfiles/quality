@@ -5,7 +5,7 @@ def runQualityTests() {
         if (env.ghprbActualCommit) {
             if (SHARD == "4") {
                 git_shallow_clone = false
-                git_branch_maps = [[name: "${ghprbActualCommit}"], [name: 'master']]
+                git_branch_maps = [[name: 'master'], [name: "${ghprbActualCommit}"]]
                 refspec = "+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
             } else {
                 git_branch_maps = [[name: "${ghprbActualCommit}"]]
@@ -146,7 +146,7 @@ pipeline {
             }
             steps {
                 sshagent(credentials: ['jenkins-worker'], ignoreMissing: true) {
-                    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: "${ghprbActualCommit}"], [name: "${ghprbTargetBranch}"]],
+                    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: "${ghprbTargetBranch}"], [name: "${ghprbActualCommit}"]],
                         doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'CloneOption',
                         honorRefspec: true, noTags: true, shallow: false]], submoduleCfg: [],
                         userRemoteConfigs: [[credentialsId: 'jenkins-worker',
