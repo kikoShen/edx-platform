@@ -4,13 +4,12 @@ def runQualityTests() {
         git_shallow_clone = true
         if (env.ghprbActualCommit) {
             if (SHARD == "4") {
-                git_branch_maps = [[name: "${ghprbActualCommit}"], [name: 'master']]
                 git_shallow_clone = false
+                refspec = "+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
             } else {
-                // shard 4 needs master and history of branches for xsslint
-                git_branch_maps = [[name: "${ghprbActualCommit}"]]
+                refspec = "+refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
             }
-            refspec = "+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
+            git_branch_maps = [[name: "${ghprbActualCommit}"]]
         } else {
             git_branch_maps = [[name: 'master']]
             refspec = "+refs/heads/master:refs/remotes/origin/master"
@@ -137,18 +136,18 @@ pipeline {
         }
         stage('Diff quality') {
             when {
-                 expression { env.ghprbActualCommit != null }
+                 expression { env.ghprbTargetBranch != null }
             }
             environment {
-                TARGET_BRANCH = "origin/master"
+                TARGET_BRANCH = "${ghprbTargetBranch}"
             }
             steps {
                 sshagent(credentials: ['jenkins-worker'], ignoreMissing: true) {
-                    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: '${ghprbActualCommit}']],
+                    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: "${ghprbActualCommit}"]],
                         doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'CloneOption',
                         honorRefspec: true, noTags: true, shallow: true]], submoduleCfg: [],
                         userRemoteConfigs: [[credentialsId: 'jenkins-worker',
-                        refspec: '+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*',
+                        refspec: "+refs/heads/${ghprbTargetBranch}:refs/remotes/origin/${ghprbTargetBranch} +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*",
                         url: 'git@github.com:edx/edx-platform.git']]]
                     unstash 'quality-1-reports'
                     unstash 'quality-2-reports'
