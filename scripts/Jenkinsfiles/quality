@@ -142,7 +142,7 @@ pipeline {
                  expression { env.ghprbTargetBranch != null }
             }
             environment {
-                TARGET_BRANCH = "origin/${ghprbTargetBranch}"
+                TARGET_BRANCH = "origin/master"
             }
             steps {
                 sshagent(credentials: ['jenkins-worker'], ignoreMissing: true) {
