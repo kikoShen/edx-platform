@@ -1,15 +1,15 @@
 def runQualityTests() {
     sshagent(credentials: ['jenkins-worker'], ignoreMissing: true) {
-        // Determine git refspec, branch(es), and clone type
+        // Determine git refspec, branch, and clone type
         git_shallow_clone = true
         if (env.ghprbActualCommit) {
             if (SHARD == "4") {
                 git_shallow_clone = false
+                git_branch_maps = [[name: "${ghprbActualCommit}"], [name: 'master']]
                 refspec = "+refs/heads/master:refs/remotes/origin/master +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
             } else {
                 refspec = "+refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
             }
-            git_branch_maps = [[name: "${ghprbActualCommit}"]]
         } else {
             git_branch_maps = [[name: 'master']]
             refspec = "+refs/heads/master:refs/remotes/origin/master"
@@ -40,6 +40,7 @@ pipeline {
     stages {
         stage('Mark build as pending on Github') {
             when {
+                 // Only run github-build-status for master builds
                  expression { env.ghprbActualCommit == null }
             }
             steps {
@@ -136,6 +137,7 @@ pipeline {
         }
         stage('Diff quality') {
             when {
+                // Only run diff quality on PR builds
                  expression { env.ghprbTargetBranch != null }
             }
             environment {
@@ -145,7 +147,7 @@ pipeline {
                 sshagent(credentials: ['jenkins-worker'], ignoreMissing: true) {
                     checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: "${ghprbActualCommit}"]],
                         doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'CloneOption',
-                        honorRefspec: true, noTags: true, shallow: true]], submoduleCfg: [],
+                        honorRefspec: true, noTags: true, shallow: false]], submoduleCfg: [],
                         userRemoteConfigs: [[credentialsId: 'jenkins-worker',
                         refspec: "+refs/heads/${ghprbTargetBranch}:refs/remotes/origin/${ghprbTargetBranch} +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*",
                         url: 'git@github.com:edx/edx-platform.git']]]
@@ -192,8 +194,10 @@ pipeline {
         always {
             script{
                 if (env.ghprbPullId != null) {
+                    // For PR jobs, run the edx-platform-test-notifier for PR reporting
                     build job: 'edx-platform-test-notifier', parameters: [string(name: 'PR_NUMBER', value: "${ghprbPullId}")], wait: false
                 } else {
+                    // For master jobs run github-build-status and report to slack when necessary
                     if (currentBuild.currentResult == "SUCCESS") {
                         create_deployment = "true"
                         build_status = "success"
@@ -202,7 +206,7 @@ pipeline {
                     else {
                         create_deployment = "false"
                         build_status = "failure"
-                        build_description = "Build Failes"
+                        build_description = "Build Failed"
                     }
 
                     commit_sha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
