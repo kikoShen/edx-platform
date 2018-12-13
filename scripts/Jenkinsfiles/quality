@@ -171,22 +171,22 @@ pipeline {
     post {
         always {
             steps {
-                script{
-                    unstash 'quality-1-reports'
-                    unstash 'quality-2-reports'
-                    unstash 'quality-3-reports'
-                    unstash 'quality-4-reports'
-                    // Check for warnings
-                    warnings canComputeNew: false, canResolveRelativePaths: false, canRunOnFailed: true, categoriesPattern: '',
-                        defaultEncoding: '', excludePattern: '', healthy: '', includePattern: '', messagesPattern: '',
-                        parserConfigurations: [[parserName: 'Pep8', pattern: 'reports/pep8/pep8.report'], [parserName: 'Pep8', pattern: 'reports/**/pylint.report']],
-                        unHealthy: ''
-                    // Publish Quality report
-                    publishHTML([allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
-                        reportDir: 'reports/metrics/',
-                        reportFiles: 'pylint/*view*/,pep8/*view*/,python_complexity/*view*/,xsscommitlint/*view*/,xsslint/*view*/,eslint/*view*/',
-                        reportName: 'Quality Report', reportTitles: '']
+                unstash 'quality-1-reports'
+                unstash 'quality-2-reports'
+                unstash 'quality-3-reports'
+                unstash 'quality-4-reports'
+                // Check for warnings
+                warnings canComputeNew: false, canResolveRelativePaths: false, canRunOnFailed: true, categoriesPattern: '',
+                    defaultEncoding: '', excludePattern: '', healthy: '', includePattern: '', messagesPattern: '',
+                    parserConfigurations: [[parserName: 'Pep8', pattern: 'reports/pep8/pep8.report'], [parserName: 'Pep8', pattern: 'reports/**/pylint.report']],
+                    unHealthy: ''
+                // Publish Quality report
+                publishHTML([allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
+                    reportDir: 'reports/metrics/',
+                    reportFiles: 'pylint/*view*/,pep8/*view*/,python_complexity/*view*/,xsscommitlint/*view*/,xsslint/*view*/,eslint/*view*/',
+                    reportName: 'Quality Report', reportTitles: ''])
 
+                script{
                     if (env.ghprbPullId != null) {
                         // For PR jobs, run the edx-platform-test-notifier for PR reporting
                         build job: 'edx-platform-test-notifier', parameters: [string(name: 'PR_NUMBER', value: "${ghprbPullId}")], wait: false
