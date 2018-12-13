@@ -146,7 +146,7 @@ pipeline {
             }
             steps {
                 sshagent(credentials: ['jenkins-worker'], ignoreMissing: true) {
-                    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: "${ghprbActualCommit}"]],
+                    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: "${ghprbActualCommit}"], [name: "master"]],
                         doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'CloneOption',
                         honorRefspec: true, noTags: true, shallow: false]], submoduleCfg: [],
                         userRemoteConfigs: [[credentialsId: 'jenkins-worker',
@@ -156,7 +156,6 @@ pipeline {
                     unstash 'quality-2-reports'
                     unstash 'quality-3-reports'
                     unstash 'quality-4-reports'
-                    sh "ls"
                     sh "./scripts/jenkins-quality-diff.sh"
                 }
             }
@@ -168,57 +167,51 @@ pipeline {
                 }
             }
         }
-        stage('Quality Reports') {
-            steps {
-                    unstash 'quality-1-reports'
-                    unstash 'quality-2-reports'
-                    unstash 'quality-3-reports'
-                    unstash 'quality-4-reports'
-                    warnings canComputeNew: false, canResolveRelativePaths: false, canRunOnFailed: true, categoriesPattern: '',
-                        defaultEncoding: '', excludePattern: '', healthy: '', includePattern: '', messagesPattern: '',
-                        parserConfigurations: [[parserName: 'Pep8', pattern: 'reports/pep8/pep8.report'], [parserName: 'Pep8', pattern: 'reports/**/pylint.report']],
-                        unHealthy: ''
-
-            }
-            post {
-                always {
-                    publishHTML([allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
-                        reportDir: 'reports/metrics/',
-                        reportFiles: 'pylint/*view*/,pep8/*view*/,python_complexity/*view*/,xsscommitlint/*view*/,xsslint/*view*/,eslint/*view*/',
-                        reportName: 'Quality Report', reportTitles: '']
-                    )
-                }
-            }
-        }
     }
     post {
         always {
-            script{
-                if (env.ghprbPullId != null) {
-                    // For PR jobs, run the edx-platform-test-notifier for PR reporting
-                    build job: 'edx-platform-test-notifier', parameters: [string(name: 'PR_NUMBER', value: "${ghprbPullId}")], wait: false
-                } else {
-                    // For master jobs run github-build-status and report to slack when necessary
-                    if (currentBuild.currentResult == "SUCCESS") {
-                        create_deployment = "true"
-                        build_status = "success"
-                        build_description = "Build Passed"
-                    }
-                    else {
-                        create_deployment = "false"
-                        build_status = "failure"
-                        build_description = "Build Failed"
-                    }
+            steps {
+                unstash 'quality-1-reports'
+                unstash 'quality-2-reports'
+                unstash 'quality-3-reports'
+                unstash 'quality-4-reports'
+                // Check for warnings
+                warnings canComputeNew: false, canResolveRelativePaths: false, canRunOnFailed: true, categoriesPattern: '',
+                    defaultEncoding: '', excludePattern: '', healthy: '', includePattern: '', messagesPattern: '',
+                    parserConfigurations: [[parserName: 'Pep8', pattern: 'reports/pep8/pep8.report'], [parserName: 'Pep8', pattern: 'reports/**/pylint.report']],
+                    unHealthy: ''
+                // Publish Quality report
+                publishHTML([allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
+                    reportDir: 'reports/metrics/',
+                    reportFiles: 'pylint/*view*/,pep8/*view*/,python_complexity/*view*/,xsscommitlint/*view*/,xsslint/*view*/,eslint/*view*/',
+                    reportName: 'Quality Report', reportTitles: '']
+                script{
+                    if (env.ghprbPullId != null) {
+                        // For PR jobs, run the edx-platform-test-notifier for PR reporting
+                        build job: 'edx-platform-test-notifier', parameters: [string(name: 'PR_NUMBER', value: "${ghprbPullId}")], wait: false
+                    } else {
+                        // For master jobs run github-build-status and report to slack when necessary
+                        if (currentBuild.currentResult == "SUCCESS") {
+                            create_deployment = "true"
+                            build_status = "success"
+                            build_description = "Build Passed"
+                        }
+                        else {
+                            create_deployment = "false"
+                            build_status = "failure"
+                            build_description = "Build Failed"
+                        }
 
-                    commit_sha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                    build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: commit_sha),
-                        string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
-                        string(name: 'TARGET_URL', value: "https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/"),
-                        string(name: 'DESCRIPTION', value: build_description), string(name: 'CONTEXT', value: 'jenkins/quality-master-pipe'),
-                        string(name: 'CREATE_DEPLOYMENT', value: create_deployment), string(name: 'BUILD_STATUS', value: build_status)],
-                        propagate: false, wait: false
-                    if (["ABORTED", "FAILURE", "UNSTABLE", "FIXED"].contains(currentBuild.currentResult)){
-                        slackSend "${currentBuild.currentResult}: `${JOB_NAME}` #${BUILD_NUMBER}:\n${BUILD_URL}"
+                        commit_sha = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                        build job: 'github-build-status', parameters: [string(name: 'GIT_SHA', value: commit_sha),
+                            string(name: 'GITHUB_ORG', value: 'edx'), string(name: 'GITHUB_REPO', value: 'edx-platform'),
+                            string(name: 'TARGET_URL', value: "https://build.testeng.edx.org/job/${JOB_NAME}/${BUILD_NUMBER}/"),
+                            string(name: 'DESCRIPTION', value: build_description), string(name: 'CONTEXT', value: 'jenkins/quality-master-pipe'),
+                            string(name: 'CREATE_DEPLOYMENT', value: create_deployment), string(name: 'BUILD_STATUS', value: build_status)],
+                            propagate: false, wait: false
+                        if (["ABORTED", "FAILURE", "UNSTABLE", "FIXED"].contains(currentBuild.currentResult)){
+                            slackSend "${currentBuild.currentResult}: `${JOB_NAME}` #${BUILD_NUMBER}:\n${BUILD_URL}"
+                        }
                     }
                 }
             }
