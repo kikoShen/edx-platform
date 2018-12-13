@@ -24,6 +24,7 @@ from openedx.core.djangoapps.user_api.api import (
     get_login_session_form,
     get_password_reset_form
 )
+from openedx.core.djangoapps.user_authn.cookies import is_logged_in_cookie_set
 from openedx.features.enterprise_support.api import enterprise_customer_for_request
 from openedx.features.enterprise_support.utils import (
     handle_enterprise_cookies_for_logistration,
@@ -53,8 +54,11 @@ def login_and_registration_form(request, initial_mode="login"):
     """
     # Determine the URL to redirect to following login/registration/third_party_auth
     redirect_to = get_next_url_for_login_page(request)
+
     # If we're already logged in, redirect to the dashboard
-    if request.user.is_authenticated:
+    # Note: we check for the existence of login-related cookies, rather than is_authenticated
+    #   since session cookies are auto-updated more frequently than other cookies.
+    if is_logged_in_cookie_set(request):
         return redirect(redirect_to)
 
     # Retrieve the form descriptions from the user API
