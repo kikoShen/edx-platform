@@ -1,22 +1,25 @@
 """
 Helpers for courseware tests.
 """
+from datetime import timedelta
 import json
 
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.urls import reverse
 from django.test import TestCase
 from django.test.client import Client, RequestFactory
+from django.urls import reverse
+from django.utils.timezone import now
 from six import text_type
 
 from courseware.access import has_access
 from courseware.masquerade import handle_ajax, setup_masquerade
 from edxmako.shortcuts import render_to_string
+from lms.djangoapps.courseware.date_summary import verified_upgrade_deadline_link
 from lms.djangoapps.lms_xblock.field_data import LmsFieldData
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from openedx.core.lib.url_utils import quote_slashes
-from student.models import Registration
+from student.models import Registration, CourseEnrollment
 from student.tests.factories import CourseEnrollmentFactory, UserFactory
 from xblock.field_data import DictFieldData
 from xmodule.modulestore.django import modulestore
@@ -348,3 +351,28 @@ def _create_mock_json_request(user, data, method='POST'):
     request.user = user
     request.session = {}
     return request
+
+
+def get_expiration_banner_text(user, course):
+    """
+    Get text for banner that messages user course expiration date
+    for different tests that depend on it.
+    """
+    expiration_date = (now() + timedelta(weeks=4)).strftime('%b. %-d, %Y')
+    upgrade_link = verified_upgrade_deadline_link(user=user, course=course)
+    enrollment = CourseEnrollment.get_enrollment(user, course.id)
+    upgrade_deadline = enrollment.upgrade_deadline
+    if upgrade_deadline is None:
+        return
+    if now() < upgrade_deadline:
+        upgrade_deadline = enrollment.course_upgrade_deadline
+    bannerText = '<strong>Audit Access Expires {expiration_date}</strong><br>\
+                 You lose all access to this course, including your progress, on {expiration_date}.<br>\
+                 Upgrade by {upgrade_deadline} to get unlimited access to the course as long as it exists on the site.\
+                  <a href="{upgrade_link}">Upgrade now<span class="sr-only"> to retain access past {expiration_date}\
+                 </span></a>'.format(
+        expiration_date=expiration_date,
+        upgrade_link=upgrade_link,
+        upgrade_deadline=upgrade_deadline.strftime('%b. %-d, %Y')
+    )
+    return bannerText

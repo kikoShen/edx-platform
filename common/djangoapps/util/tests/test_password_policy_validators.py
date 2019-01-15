@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """Tests for util.password_policy_validators module."""
 
-import mock
 import unittest
 
 from ddt import data, ddt, unpack
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test.utils import override_settings
@@ -25,7 +23,6 @@ class PasswordPolicyValidatorsTestCase(unittest.TestCase):
         2) requiring multiple instances of the check (also checks proper plural message)
         3) successful check
     """
-
     def validation_errors_checker(self, password, msg, user=None):
         """
         This helper function is used to check the proper error messages are
@@ -60,6 +57,17 @@ class PasswordPolicyValidatorsTestCase(unittest.TestCase):
 
         # Test badly encoded password
         self.validation_errors_checker(b'\xff\xff', 'Invalid password.')
+
+    def test_password_unicode_normalization(self):
+        """ Tests that validate_password normalizes passwords """
+        # s ̣ ̇ (s with combining dot below and combining dot above)
+        not_normalized_password = u'\u0073\u0323\u0307'
+        self.assertEqual(len(not_normalized_password), 3)
+
+        # When we normalize we expect the not_normalized password to fail
+        # because it should be normalized to u'\u1E69' -> ṩ
+        self.validation_errors_checker(not_normalized_password,
+                                       'This password is too short. It must contain at least 2 characters.')
 
     @data(
         ([create_validator_config('util.password_policy_validators.MinimumLengthValidator', {'min_length': 2})],

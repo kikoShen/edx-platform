@@ -28,27 +28,24 @@ from enrollment import api
 from enrollment.errors import CourseEnrollmentError
 from enrollment.views import EnrollmentUserThrottle
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+from openedx.core.djangoapps.course_groups import cohorts
 from openedx.core.djangoapps.embargo.models import Country, CountryAccessRule, RestrictedCourse
 from openedx.core.djangoapps.embargo.test_utils import restrict_course
-from openedx.core.djangoapps.course_groups import cohorts
+from openedx.core.djangoapps.oauth_dispatch.jwt import create_jwt_for_user
 from openedx.core.djangoapps.user_api.models import (
     RetirementState,
     UserRetirementStatus,
     UserOrgTag
 )
 from openedx.core.lib.django_test_client_utils import get_absolute_url
-from openedx.core.lib.token_utils import JwtBuilder
 from openedx.features.enterprise_support.tests import FAKE_ENTERPRISE_CUSTOMER
 from openedx.features.enterprise_support.tests.mixins.enterprise import EnterpriseServiceMockMixin
-from student.models import (
-    CourseEnrollment,
-    get_retired_username_by_username,
-    get_retired_email_by_email,
-)
+from student.models import CourseEnrollment
 from student.roles import CourseStaffRole
 from student.tests.factories import AdminFactory, UserFactory, SuperuserFactory
 from util.models import RateLimitConfiguration
 from util.testing import UrlResetMixin
+from six import text_type
 
 
 class EnrollmentTestMixin(object):
@@ -1340,7 +1337,7 @@ class UnenrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase):
         """
         Helper function for creating headers for the JWT authentication.
         """
-        token = JwtBuilder(user).build_token([])
+        token = create_jwt_for_user(user)
         headers = {'HTTP_AUTHORIZATION': 'JWT ' + token}
 
         return headers
@@ -1417,3 +1414,72 @@ class UnenrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase):
         url = reverse('unenrollment')
         headers = self.build_jwt_headers(submitting_user)
         return self.client.post(url, json.dumps(data), content_type='application/json', **headers)
+
+
+@ddt.ddt
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+class UserRoleTest(ModuleStoreTestCase):
+    """
+    Tests the API call to list user roles.
+    """
+    USERNAME = "Bob"
+    EMAIL = "bob@example.com"
+    PASSWORD = "edx"
+
+    ENABLED_CACHES = ['default']
+
+    def setUp(self):
+        """ Create a course and user, then log in. """
+        super(UserRoleTest, self).setUp()
+        self.course1 = CourseFactory.create(emit_signals=True, org="org1", course="course1", run="run1")
+        self.course2 = CourseFactory.create(emit_signals=True, org="org2", course="course2", run="run2")
+        self.user = UserFactory.create(
+            username=self.USERNAME,
+            email=self.EMAIL,
+            password=self.PASSWORD,
+        )
+        self.client.login(username=self.USERNAME, password=self.PASSWORD)
+
+    def _create_expected_role_dict(self, course, role):
+        return {
+            'course_id': text_type(course.id),
+            'org': course.org,
+            'role': role.ROLE,
+        }
+
+    def _assert_roles(self, expected_response):
+        response = self.client.get(reverse('roles'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data, expected_response)
+
+    def test_not_logged_in(self):
+        self.client.logout()
+        response = self.client.get(reverse('roles'))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_roles_no_roles(self):
+        self._assert_roles([])
+
+    def test_roles(self):
+        role1 = CourseStaffRole(self.course1.id)
+        role1.add_users(self.user)
+        expected_role1 = self._create_expected_role_dict(self.course1, role1)
+        self._assert_roles([expected_role1])
+        role2 = CourseStaffRole(self.course2.id)
+        role2.add_users(self.user)
+        expected_role2 = self._create_expected_role_dict(self.course2, role2)
+        self._assert_roles([expected_role2, expected_role1])
+
+    def test_roles_exception(self):
+        with patch('enrollment.api.get_user_roles') as mock_get_user_roles:
+            mock_get_user_roles.side_effect = Exception()
+            response = self.client.get(reverse('roles'))
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            expected_response = {
+                "message": (
+                    u"An error occurred while retrieving roles for user '{username}"
+                ).format(username=self.user.username)
+            }
+            response_data = json.loads(response.content)
+            self.assertEqual(response_data, expected_response)

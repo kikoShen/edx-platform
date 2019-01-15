@@ -94,7 +94,7 @@ from student.text_me_the_app import TextMeTheAppFragmentView
 from util.bad_request_rate_limiter import BadRequestRateLimiter
 from util.db import outer_atomic
 from util.json_request import JsonResponse
-from util.password_policy_validators import validate_password
+from util.password_policy_validators import normalize_password, validate_password
 
 log = logging.getLogger("edx.student")
 
@@ -125,8 +125,8 @@ def csrf_token(context):
     token = context.get('csrf_token', '')
     if token == 'NOTPROVIDED':
         return ''
-    return (u'<div style="display:none"><input type="hidden"'
-            ' name="csrfmiddlewaretoken" value="{}" /></div>'.format(token))
+    return (HTML(u'<div style="display:none"><input type="hidden"'
+            ' name="csrfmiddlewaretoken" value="{}" /></div>').format(token))
 
 
 # NOTE: This view is not linked to directly--it is called from
@@ -827,6 +827,16 @@ def password_reset_confirm_wrapper(request, uidb36=None, token=None):
         )
 
     if request.method == 'POST':
+        # We have to make a copy of request.POST because it is a QueryDict object which is immutable until copied.
+        # We have to use request.POST because the password_reset_confirm method takes in the request and a user's
+        # password is set to the request.POST['new_password1'] field. We have to also normalize the new_password2
+        # field so it passes the equivalence check that new_password1 == new_password2
+        # In order to switch out of having to do this copy, we would want to move the normalize_password code into
+        # a custom User model's set_password method to ensure it is always happening upon calling set_password.
+        request.POST = request.POST.copy()
+        request.POST['new_password1'] = normalize_password(request.POST['new_password1'])
+        request.POST['new_password2'] = normalize_password(request.POST['new_password2'])
+
         password = request.POST['new_password1']
 
         try:
@@ -900,6 +910,33 @@ def validate_new_email(user, new_email):
 
     if new_email == user.email:
         raise ValueError(_('Old email is the same as the new email.'))
+
+
+def validate_secondary_email(account_recovery, new_email):
+    """
+    Enforce valid email addresses.
+    """
+    from openedx.core.djangoapps.user_api.accounts.api import get_email_validation_error, \
+        get_email_existence_validation_error, get_secondary_email_validation_error
+
+    if get_email_validation_error(new_email):
+        raise ValueError(_('Valid e-mail address required.'))
+
+    if new_email == account_recovery.secondary_email:
+        raise ValueError(_('Old email is the same as the new email.'))
+
+    # Make sure that secondary email address is not same as user's primary email.
+    if new_email == account_recovery.user.email:
+        raise ValueError(_('Cannot be same as your sign in email address.'))
+
+    # Make sure that secondary email address is not same as any of the primary emails.
+    message = get_email_existence_validation_error(new_email)
+    if message:
+        raise ValueError(message)
+
+    message = get_secondary_email_validation_error(new_email)
+    if message:
+        raise ValueError(message)
 
 
 def do_email_change_request(user, new_email, activation_key=None):
