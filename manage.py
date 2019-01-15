@@ -16,7 +16,7 @@ from __future__ import absolute_import, print_function
 from openedx.core.lib.logsettings import log_python_warnings
 log_python_warnings()
 
-# Patch the xml libs before anything else.
+# Patch the xml libs before anything else.  in /commom/lib/safe_lxml
 from safe_lxml import defuse_xml_libs
 defuse_xml_libs()
 
